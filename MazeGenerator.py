@@ -5,12 +5,11 @@ from tkinter import *
 
 class MazeGenerator:
     modes = ['basic', 'improved']
-    measurements = [2, 3]
 
     def __init__(self):
         self.visualize = False
         self.mode = 'improved'
-        self.measurement = 2
+        self.dimension = 2
         self.window = None
         self.canvas = None
         self.window_size = None
@@ -31,9 +30,9 @@ class MazeGenerator:
         else:
             return False
 
-    def set_measurement(self, measurement: int):
-        if measurement in self.measurements:
-            self.measurement = measurement
+    def set_dimension(self, dimension: int):
+        if 2 <= dimension <= 4:
+            self.dimension = dimension
             return True
         else:
             return False
@@ -50,101 +49,18 @@ class MazeGenerator:
         return True
 
     def generate(self):
-        if self.measurement == 2:
-            return self.generate_2d()
-        elif self.measurement == 3:
-            return self.generate_3d()
+        return self.generate_maze()
 
-    def generate_3d(self):
-        self.maze = np.zeros((self.size, self.size, self.size), int)
-        coordinates = [i for i in range(1, self.size, 2)]
-        unvisited_cells = list()
-        for z in coordinates:
-            for y in coordinates:
-                for x in coordinates:
-                    unvisited_cells.append([z, y, x])
-                    self.maze[z, y, x] = 1
+    def generate_maze(self):
+        d = self.dimension
+        self.maze = np.zeros([self.size for i in range(d)], int)
+        unvisited_cells = self.create_unvisited_cells()
 
-        cur_cell = [1, 1, 1]
-        visited_cells = list()
-        path_stack = list()
-        visited_cells.append(cur_cell)
-        unvisited_cells.remove(cur_cell)
-
-        while unvisited_cells:
-            unvisited_neighbors = list()
-
-            if cur_cell[0] != 1:
-                neighbor_up = [cur_cell[0] - 2, cur_cell[1], cur_cell[2]]
-                if not visited_cells.count(neighbor_up):
-                    unvisited_neighbors.append(neighbor_up)
-
-            if cur_cell[0] != self.size - 2:
-                neighbor_down = [cur_cell[0] + 2, cur_cell[1], cur_cell[2]]
-                if not visited_cells.count(neighbor_down):
-                    unvisited_neighbors.append(neighbor_down)
-
-            if cur_cell[1] != 1:
-                neighbor_north = [cur_cell[0], cur_cell[1] - 2, cur_cell[2]]
-                if not visited_cells.count(neighbor_north):
-                    unvisited_neighbors.append(neighbor_north)
-
-            if cur_cell[1] != self.size - 2:
-                neighbor_south = [cur_cell[0], cur_cell[1] + 2, cur_cell[2]]
-                if not visited_cells.count(neighbor_south):
-                    unvisited_neighbors.append(neighbor_south)
-
-            if cur_cell[2] != 1:
-                neighbor_west = [cur_cell[0], cur_cell[1], cur_cell[2] - 2]
-                if not visited_cells.count(neighbor_west):
-                    unvisited_neighbors.append(neighbor_west)
-
-            if cur_cell[2] != self.size - 2:
-                neighbor_east = [cur_cell[0], cur_cell[1], cur_cell[2] + 2]
-                if not visited_cells.count(neighbor_east):
-                    unvisited_neighbors.append(neighbor_east)
-
-            if len(unvisited_neighbors):
-                if self.mode == 'improved' and len(unvisited_neighbors) > 1:
-                    path_stack.append(cur_cell.copy())
-                elif self.mode == 'basic':
-                    path_stack.append(cur_cell.copy())
-
-                next_cell = choice(unvisited_neighbors)
-                wall_z = (cur_cell[0] + next_cell[0]) // 2
-                wall_y = (cur_cell[1] + next_cell[1]) // 2
-                wall_x = (cur_cell[2] + next_cell[2]) // 2
-                self.maze[wall_z, wall_y, wall_x] = 1
-
-                cur_cell = next_cell.copy()
-            elif len(visited_cells):
-                cur_cell = path_stack.pop()
-            else:
-                print('Jesus Christ it\'s recursion!')
-                exit()
-
-            if not visited_cells.count(cur_cell):
-                visited_cells.append(cur_cell.copy())
-
-            if unvisited_cells.count(cur_cell):
-                unvisited_cells.remove(cur_cell)
-
-        return self.maze
-
-    def generate_2d(self):
-        self.maze = np.zeros((self.size, self.size), int)
-        coordinates = [i for i in range(1, self.size, 2)]
-        unvisited_cells = list()
-        for x in coordinates:
-            for y in coordinates:
-                unvisited_cells.append([x, y])
-                self.maze[x, y] = 1
-                self.set_cell_color_white([x, y])
-
+        # just for 2 dimensions
         self.create_canvas_background()
         self.update_window()
 
-        cur_cell = [1, 1]
+        cur_cell = [1 for i in range(d)]
         visited_cells = list()
         path_stack = list()
         visited_cells.append(cur_cell)
@@ -152,26 +68,17 @@ class MazeGenerator:
 
         while unvisited_cells:
             unvisited_neighbors = list()
-
-            if cur_cell[0] != 1:
-                up_neighbor = [cur_cell[0] - 2, cur_cell[1]]
-                if not visited_cells.count(up_neighbor):
-                    unvisited_neighbors.append(up_neighbor)
-
-            if cur_cell[1] != 1:
-                left_neighbor = [cur_cell[0], cur_cell[1] - 2]
-                if not visited_cells.count(left_neighbor):
-                    unvisited_neighbors.append(left_neighbor)
-
-            if cur_cell[0] != self.size - 2:
-                down_neighbor = [cur_cell[0] + 2, cur_cell[1]]
-                if not visited_cells.count(down_neighbor):
-                    unvisited_neighbors.append(down_neighbor)
-
-            if cur_cell[1] != self.size - 2:
-                right_neighbor = [cur_cell[0], cur_cell[1] + 2]
-                if not visited_cells.count(right_neighbor):
-                    unvisited_neighbors.append(right_neighbor)
+            for i in range(d):
+                if cur_cell[i] != 1:
+                    neighbor_cell = cur_cell.copy()
+                    neighbor_cell[i] = neighbor_cell[i] - 2
+                    if not visited_cells.count(neighbor_cell):
+                        unvisited_neighbors.append(neighbor_cell.copy())
+                if cur_cell[i] != self.size - 2:
+                    neighbor_cell = cur_cell.copy()
+                    neighbor_cell[i] = neighbor_cell[i] + 2
+                    if not visited_cells.count(neighbor_cell):
+                        unvisited_neighbors.append(neighbor_cell.copy())
 
             if len(unvisited_neighbors):
                 if self.mode == 'improved' and len(unvisited_neighbors) > 1:
@@ -180,33 +87,67 @@ class MazeGenerator:
                     path_stack.append(cur_cell.copy())
 
                 next_cell = choice(unvisited_neighbors)
-                wall_x = (cur_cell[0] + next_cell[0]) // 2
-                wall_y = (cur_cell[1] + next_cell[1]) // 2
-                self.maze[wall_x, wall_y] = 1
-
-                self.set_cell_color_white(cur_cell)
-                self.set_cell_color_white([wall_x, wall_y])
+                wall = [(cur_cell[i] + next_cell[i]) // 2 for i in range(d)]
+                if d == 2:
+                    self.maze[wall[0], wall[1]] = 1
+                    self.set_cell_color_white(cur_cell)
+                    self.set_cell_color_white([wall[0], wall[1]])
+                if d == 3:
+                    self.maze[wall[0], wall[1], wall[2]] = 1
+                if d == 4:
+                    self.maze[wall[0], wall[1], wall[2], wall[3]] = 1
                 cur_cell = next_cell.copy()
             elif len(visited_cells):
+                # works just for 2 dimensions
                 self.set_cell_color_white(cur_cell)
+
                 cur_cell = path_stack.pop()
+
+                # works just for 2 dimensions
                 self.set_cell_color_active(cur_cell)
             else:
                 print('Jesus Christ it\'s recursion!')
                 exit()
 
+            # works just for 2 dimensions
             self.set_cell_color_active(cur_cell)
 
             if not visited_cells.count(cur_cell):
                 visited_cells.append(cur_cell.copy())
-
             if unvisited_cells.count(cur_cell):
                 unvisited_cells.remove(cur_cell)
 
+            # works just for 2 dimensions
             self.update_window()
 
+        # works just for 2 dimensions
         self.mainloop()
         return self.maze
+
+    def create_unvisited_cells(self):
+        unvisited_cells = list()
+        coordinates = [i for i in range(1, self.size, 2)]
+        if self.dimension == 2:
+            for y in coordinates:
+                for x in coordinates:
+                    unvisited_cells.append([y, x])
+                    self.maze[y, x] = 1
+                    self.set_cell_color_white([y, x])
+        elif self.dimension == 3:
+            for z in coordinates:
+                for y in coordinates:
+                    for x in coordinates:
+                        unvisited_cells.append([z, y, x])
+                        self.maze[z, y, x] = 1
+        elif self.dimension == 4:
+            for d in coordinates:
+                for z in coordinates:
+                    for y in coordinates:
+                        for x in coordinates:
+                            unvisited_cells.append([d, z, y, x])
+                            self.maze[d, z, y, x] = 1
+
+        return unvisited_cells
 
     def set_cell_color_active(self, cell: list):
         return self.set_cell_color(cell, 'red')
@@ -215,7 +156,7 @@ class MazeGenerator:
         return self.set_cell_color(cell, '#fff')
 
     def set_cell_color(self, cell: list, color: str):
-        if self.visualize and self.canvas:
+        if self.visualize and self.canvas and self.dimension == 2:
             x = cell[0] * self.ratio
             y = cell[1] * self.ratio
             self.canvas.create_rectangle(x, y, x + self.ratio, y + self.ratio, fill=color, outline=color)
@@ -224,7 +165,7 @@ class MazeGenerator:
             return False
 
     def create_canvas_background(self):
-        if self.visualize and self.canvas:
+        if self.visualize and self.canvas and self.dimension == 2:
             border_space = self.window_size
             self.canvas.create_rectangle(0, 0, border_space, border_space, fill='#000', outline='#000')
             return True
@@ -232,14 +173,14 @@ class MazeGenerator:
             return False
 
     def update_window(self):
-        if self.visualize and self.window:
+        if self.visualize and self.window and self.dimension == 2:
             self.window.update()
             return True
         else:
             return False
 
     def mainloop(self):
-        if self.visualize and self.window:
+        if self.visualize and self.window and self.dimension == 2:
             self.window.mainloop()
             return True
         else:
