@@ -4,11 +4,11 @@ from tkinter import *
 
 
 class MazeGenerator:
-    modes = ['basic', 'improved']
+    modes = ['basic', 'improved', 'useful_deletions']
 
     def __init__(self):
         self.visualize = False
-        self.mode = 'improved'
+        self.mode = 'useful_deletions'
         self.dimension = 2
         self.window = None
         self.canvas = None
@@ -62,7 +62,7 @@ class MazeGenerator:
 
         cur_cell = [1 for i in range(d)]
         visited_cells = list()
-        path_stack = list()
+        path_stack = dict() if self.mode == 'useful_deletions' else list()
         visited_cells.append(cur_cell)
         unvisited_cells.remove(cur_cell)
 
@@ -74,20 +74,41 @@ class MazeGenerator:
                     neighbor_cell[i] = neighbor_cell[i] - 2
                     if not visited_cells.count(neighbor_cell):
                         unvisited_neighbors.append(neighbor_cell.copy())
+                    elif self.mode == 'useful_deletions':
+                        neighbor_cell = tuple(neighbor_cell)
+                        neighbor_cell_neighbors = path_stack.get(neighbor_cell)
+                        if neighbor_cell_neighbors:
+                            if neighbor_cell_neighbors == 1:
+                                path_stack.pop(neighbor_cell)
+                            else:
+                                path_stack.update({neighbor_cell: neighbor_cell_neighbors - 1})
                 if cur_cell[i] != self.size - 2:
                     neighbor_cell = cur_cell.copy()
                     neighbor_cell[i] = neighbor_cell[i] + 2
                     if not visited_cells.count(neighbor_cell):
                         unvisited_neighbors.append(neighbor_cell.copy())
+                    elif self.mode == 'useful_deletions':
+                        neighbor_cell = tuple(neighbor_cell)
+                        neighbor_cell_neighbors = path_stack.get(neighbor_cell)
+                        if neighbor_cell_neighbors:
+                            if neighbor_cell_neighbors == 1:
+                                path_stack.pop(neighbor_cell)
+                            else:
+                                path_stack.update({neighbor_cell: neighbor_cell_neighbors - 1})
 
             if len(unvisited_neighbors):
-                if self.mode == 'improved' and len(unvisited_neighbors) > 1:
-                    path_stack.append(cur_cell.copy())
+                if len(unvisited_neighbors) > 1:
+                    if self.mode == 'useful_deletions':
+                        path_stack.update({tuple(cur_cell): len(unvisited_neighbors)})
+                    elif self.mode == 'improved':
+                        path_stack.append(cur_cell.copy())
                 elif self.mode == 'basic':
                     path_stack.append(cur_cell.copy())
 
                 next_cell = choice(unvisited_neighbors)
                 wall = [(cur_cell[i] + next_cell[i]) // 2 for i in range(d)]
+
+                # TODO
                 if d == 2:
                     self.maze[wall[0], wall[1]] = 1
                     self.set_cell_color_white(cur_cell)
@@ -96,12 +117,16 @@ class MazeGenerator:
                     self.maze[wall[0], wall[1], wall[2]] = 1
                 if d == 4:
                     self.maze[wall[0], wall[1], wall[2], wall[3]] = 1
+
                 cur_cell = next_cell.copy()
             elif len(visited_cells):
                 # works just for 2 dimensions
                 self.set_cell_color_white(cur_cell)
 
-                cur_cell = path_stack.pop()
+                if self.mode == 'useful_deletions':
+                    cur_cell = list(list(path_stack.popitem()).pop(0))
+                else:
+                    cur_cell = path_stack.pop()
 
                 # works just for 2 dimensions
                 self.set_cell_color_active(cur_cell)
@@ -189,6 +214,6 @@ class MazeGenerator:
 
 if __name__ == '__main__':
     maze = MazeGenerator()
-    maze.set_size(200)
-    maze.set_visualize(window_size=900)
+    maze.set_size(175)
+    maze.set_visualize(window_size=800)
     maze.generate()
